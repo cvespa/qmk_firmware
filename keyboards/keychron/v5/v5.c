@@ -30,12 +30,11 @@ bool dip_switch_update_kb(uint8_t index, bool active) {
 
 #endif  // DIP_SWITCH_ENABLE
 
-#if defined(RGB_MATRIX_ENABLE) && defined(CAPS_LOCK_LED_INDEX)
+#if defined(RGB_MATRIX_ENABLE) && (defined(CAPS_LOCK_LED_INDEX) || defined(NUM_LOCK_LED_INDEX))
 
 bool process_record_kb(uint16_t keycode, keyrecord_t *record) {
     if (!process_record_user(keycode, record)) { return false; }
     switch (keycode) {
-#ifdef RGB_MATRIX_ENABLE
         case RGB_TOG:
             if (record->event.pressed) {
                 switch (rgb_matrix_get_flags()) {
@@ -53,22 +52,39 @@ bool process_record_kb(uint16_t keycode, keyrecord_t *record) {
                 rgb_matrix_enable();
             }
             return false;
-#endif
     }
     return true;
+}
+
+void set_rgb_matrix_indicator(bool check, int index, uint8_t led_min, uint8_t led_max) {
+    // RGB_MATRIX_INDICATOR_SET_COLOR(index, red, green, blue);
+    if (check) {
+        // white | RGB_MATRIX_INDICATOR_SET_COLOR(index, 255, 255, 255);
+        // U9 | RGB_MATRIX_INDICATOR_SET_COLOR(index, 172, 166, 147);
+        // RAL 220 20 20 |
+        RGB_MATRIX_INDICATOR_SET_COLOR(index, 0, 55, 64);
+    } else {
+        if (!rgb_matrix_get_flags()) {
+            // black
+            RGB_MATRIX_INDICATOR_SET_COLOR(index, 0, 0, 0);
+        }
+    }
 }
 
 bool rgb_matrix_indicators_advanced_kb(uint8_t led_min, uint8_t led_max) {
     if (!rgb_matrix_indicators_advanced_user(led_min, led_max)) { return false; }
     // RGB_MATRIX_INDICATOR_SET_COLOR(index, red, green, blue);
 
-    if (host_keyboard_led_state().caps_lock) {
-        RGB_MATRIX_INDICATOR_SET_COLOR(CAPS_LOCK_LED_INDEX, 255, 255, 255);
-    } else {
-        if (!rgb_matrix_get_flags()) {
-           RGB_MATRIX_INDICATOR_SET_COLOR(CAPS_LOCK_LED_INDEX, 0, 0, 0);
-        }
-    }
+    #ifdef CAPS_LOCK_LED_INDEX
+        bool caps = host_keyboard_led_state().caps_lock;
+        set_rgb_matrix_indicator(caps, CAPS_LOCK_LED_INDEX, led_min, led_max);
+    #endif // CAPS_LOCK_LED_INDEX
+
+    #ifdef NUM_LOCK_LED_INDEX
+        bool num = host_keyboard_led_state().num_lock;
+        set_rgb_matrix_indicator(num, NUM_LOCK_LED_INDEX, led_min, led_max);
+    #endif // NUM_LOCK_LED_INDEX
+
     return true;
 }
 
